@@ -40,7 +40,7 @@ public class VolumetricRenderFeature : ScriptableRendererFeature
         public override void Execute(ScriptableRenderContext context, ref RenderingData renderingData)
         {
             var inst = VolumetricRenderer.Instance;
-            if (null == inst || null == inst.material || !inst.gameObject.activeInHierarchy || !renderingData.cameraData.postProcessEnabled)
+            if (null == inst || null == inst.material || !inst.gameObject.activeInHierarchy || !inst.enabled || !renderingData.cameraData.postProcessEnabled)
             {
                 return;
             }

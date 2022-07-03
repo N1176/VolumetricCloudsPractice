@@ -12,6 +12,17 @@ Shader "Volumetric/Cloud"
         _DetailScale ("Worley Scale", Vector) = (1, 1, 1)
         [NoScaleOffset]_BlueNoise ("Blue Noise", 2D) = "white" { }
         [NoScaleOffset]_WeatherMap ("Weather Map", 2D) = "white" { }
+
+        _Coverage ("Cloud Coverage", Range(0, 1)) = 1
+        _BlueNoiseScale("Blue Noise Scale", Range(0.01, 4)) = 1
+
+        [Header(March Parameters)]
+        _MarchNoiseWeight("March Noise Weight", Range(0, 1))
+        _MarchScale("March Scale", float) = 1
+        _MarchOffset("March Offset", float) = 0
+
+        [Header(Density)]
+        _DensityScale("Density Scale", float) = 1;
     }
     SubShader
     {
@@ -57,6 +68,10 @@ Shader "Volumetric/Cloud"
             float3 _BoxMin;
             float3 _BoxMax;
 
+            float _Coverage;
+            float _BlueNoiseScale;
+            float _Anvil;
+
 
             struct appdata
             {
@@ -67,8 +82,8 @@ Shader "Volumetric/Cloud"
             struct v2f
             {
                 float4 posNDC : SV_POSITION;
-                float3 rayDirWS : TEXCOORD0;
-                float2 uv : TEXCOORD1;
+                float4 uv : TEXCOORD0;
+                float3 rayDirWS : TEXCOORD1;
             };
 
             // 计算射线和包围盒的碰撞信息
@@ -123,11 +138,40 @@ Shader "Volumetric/Cloud"
                 float3 uvw = float3(0, 0, 0);
             }
 
+            float SampleDensity(float3 position)
+            {
+                float3 nolPos = (position - _BoxMin)/(_BoxMax - _BoxMin);
+                float4 weather = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, nolPos.xz, 0);
+                float coverage = max(weather.r, saturate(_Coverage - 0.5) * weather.g * 2);
+                
+                float shapeAlter = saturate(Remap(nolPos.y, 0, 0.07, 0, 1))
+                    * saturate(Remap(nolPos.y, weather.b * 0.2, weather.b, 1, 0));
+
+                // 铁砧形状，上下粗，中间细的云形状
+                shapeAlter = pow(shapeAlter, saturate(Remap(nolPos.y, 0.65, 0.95, 1, 1 - _Coverage * _Anvil)));
+                
+                float densityAlter = 2 * weather.a * nolPos.y * _DensityScale
+                    * saturate(Remap(nolPos.y, 0, 0.15, 0, 1))
+                    * saturate(Remap(0.9, 1.0, 1, 0));
+
+                float3 shapNoiseUV = nolPos;
+                float4 noise = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapNoiseUV, 0);
+                float shapNoise = Remap(noise.r, noise.g * 0.625 + noise.b * 0.25 + noise.a * 0.125 - 1, 1, 0, 1);
+                shapNoise = saturate(Remap(density * shapeAlter, 1 - _Coverage * coverage, 1, 0, 1));
+
+                float3 detailNoiseUV = nolPos;
+                noise = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailNoiseUV, 0);
+                float detailNoiseFBM = noise.r * 0.625 + noise.g * 0.25 + noise.b * 0.125;
+                float detailNoiseMod = 0.35 * exp(-0.75 * _Coverage) * lerp(detailNoiseFBM, detailNoiseFBM, saturate(1 - nolPos.y * 5.0));
+                float density = saturate(Remap(shapNoise, detailNoiseMod, 1, 0, 1)) * densityAlter;
+            }
+
             v2f vert(appdata v)
             {
                 v2f o;
                 o.posNDC = TransformObjectToHClip(v.vertex);
-                o.uv = v.uv;
+                o.uv.xy = v.uv;
+                o.uv.zw = v.uv * float2(1, _ScreenParams.y / _ScreenParams.x) * _BlueNoiseScale;
                 float4 rayDir = mul(unity_CameraInvProjection, float4(v.uv * 2 - 1, 0, -1));
                 rayDir.w = 0;
                 o.rayDirWS = mul(unity_CameraToWorld, rayDir).xyz;
@@ -138,15 +182,17 @@ Shader "Volumetric/Cloud"
             {
                 float3 rayDirWS = normalize(i.rayDirWS);
                 float3 rayPosWS = _WorldSpaceCameraPos;
-                float2 intercept = InterceptRayBox(_BoxMin, _BoxMax, rayPosWS, 1.0 / rayDirWS);
-                half4 color = half4(0, 0, 0, 0);
-                if (intercept.y > 0)
-                {
-                    float2 depthUV = i.uv;
-                    float2 depth = SampleSceneDepth(i.uv);
-                    return half4(depth.xxx, 1);
-                }
-                return color;
+                float2 interception = InterceptRayBox(_BoxMin, _BoxMax, rayPosWS, 1.0 / rayDirWS);
+                float blueNoise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0);
+                float maxMarchDistance =min(interception.y, LinearEyeDepth(SampleSceneDepth(i.uv.xy), _ZBufferParams));
+                float currentDistance = 0;
+                float3 marchPostionWS = rayPosWS + rayDirWS * interception.x;
+                return half4(blueNoise.xxx, 1);
+                
+                
+
+                
+                return half4(1, 1, 1, 1);
             }
             ENDHLSL
         }

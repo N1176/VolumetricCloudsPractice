@@ -25,16 +25,11 @@ public class VolumetricRenderer : MonoBehaviour
     {
         Instance = this;
     }
-
-    public bool showOutline = true;
-    public Color outlineColor = Color.green;
+    
     void OnDrawGizmosSelected()
     {
-        if (showOutline)
-        {
-            Gizmos.color = outlineColor;
-            Gizmos.DrawWireCube(transform.position, Size);
-        }
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(transform.position, Size);
     }
 
     private static class ShaderPropertyID
