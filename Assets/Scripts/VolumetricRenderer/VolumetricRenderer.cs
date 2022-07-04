@@ -26,7 +26,7 @@ public class VolumetricRenderer : MonoBehaviour
         Instance = this;
     }
     
-    void OnDrawGizmosSelected()
+    void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
         Gizmos.DrawWireCube(transform.position, Size);
@@ -40,7 +40,7 @@ public class VolumetricRenderer : MonoBehaviour
 
     public Material material;
 
-    [Range(1, 10)]
+    [Range(0, 10)]
     public int downSample = 1;
 
     public Vector3 BoundingMax
