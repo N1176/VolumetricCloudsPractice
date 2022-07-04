@@ -102,6 +102,7 @@ class VolumetricRenderPass : ScriptableRenderPass
         cmd.GetTemporaryRT(tempRTID.id, opaqueDesc);
         opaqueDesc.width >>= inst.downSample;
         opaqueDesc.height >>= inst.downSample;
+        opaqueDesc.colorFormat = RenderTextureFormat.ARGB32;
         cmd.GetTemporaryRT(targetRTID.id, opaqueDesc);
         inst.SetupMaterial();
         cmd.Blit(sourceRTID, tempRTID.Identifier());
