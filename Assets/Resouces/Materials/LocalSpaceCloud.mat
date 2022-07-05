@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Cloud_LS
-  m_Shader: {fileID: 4800000, guid: 800523fce3163454e826bc188e611f50, type: 3}
+  m_Name: LocalSpaceCloud
+  m_Shader: {fileID: 4800000, guid: 57985286431eb9a4fa15b7ad66c22ef2, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -131,8 +131,8 @@ Material:
     - _BaseColor: {r: 1, g: 1, b: 1, a: 1}
     - _BoundMax: {r: 1, g: 1, b: 1, a: 1}
     - _BoundMin: {r: 0, g: 0, b: 0, a: 1}
-    - _BoxMax: {r: 1998.78, g: 92, b: 2000, a: 0}
-    - _BoxMin: {r: -1998.78, g: -92, b: -2000, a: 0}
+    - _BoxMax: {r: 2000, g: 125, b: 2000, a: 0}
+    - _BoxMin: {r: -2000, g: -125, b: -2000, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _DensityParam: {r: -4.22, g: 1.32, b: 0.4, a: 0}
     - _DetailOffset: {r: 130.23, g: 0, b: 0, a: 0}

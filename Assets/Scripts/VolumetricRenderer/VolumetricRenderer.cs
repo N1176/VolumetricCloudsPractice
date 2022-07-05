@@ -69,12 +69,14 @@ public class VolumetricRenderer : MonoBehaviour
             Gizmos.DrawLine(points[kGizemoLineIndex[i]], points[kGizemoLineIndex[i + 1]]);
         }
     }
-    #endif
+#endif
 
     private static class ShaderPropertyID
     {
         public static readonly int BoxMin = Shader.PropertyToID("_BoxMin");
         public static readonly int BoxMax = Shader.PropertyToID("_BoxMax");
+        public static readonly int BoxW2L = Shader.PropertyToID("_BoxW2L");
+        public static readonly int BoxSize = Shader.PropertyToID("_BoxSize");
     }
 
     public Material material;
@@ -116,8 +118,12 @@ public class VolumetricRenderer : MonoBehaviour
         {
             var size = Size * 0.5f;
             var pos = transform.position;
-            material.SetVector(ShaderPropertyID.BoxMax, pos + size);
-            material.SetVector(ShaderPropertyID.BoxMin, pos - size);
+            // material.SetVector(ShaderPropertyID.BoxMax, pos + size);
+            // material.SetVector(ShaderPropertyID.BoxMin, pos - size);
+            var matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
+            matrix = matrix.inverse;
+            material.SetMatrix(ShaderPropertyID.BoxW2L, matrix);
+            material.SetVector(ShaderPropertyID.BoxSize, transform.lossyScale);
         }
     }
 }

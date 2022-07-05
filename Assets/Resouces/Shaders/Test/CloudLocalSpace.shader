@@ -1,5 +1,5 @@
 // 将灯光，射线方向，映射到模型的本地空间下计算。
-Shader "Volumetric/CloudLocalSpace"
+Shader "Volumetric/Test/CloudLocalSpace"
 {
     Properties
     {
@@ -88,8 +88,8 @@ Shader "Volumetric/CloudLocalSpace"
             #define sampler_3D sampler_trilinear_repeat
 
 
-            float3 _BoxMin;
-            float3 _BoxMax;
+            float3 _BoxSize;
+            float4x4 _BoxW2L;
 
             float3 _EdgeFadeDistance;
 
@@ -99,8 +99,6 @@ Shader "Volumetric/CloudLocalSpace"
             float4 _TransmittiveParam;
             float4 _SpeedParam;
 
-
-
             struct appdata
             {
                 float3 vertex : POSITION;
@@ -109,9 +107,11 @@ Shader "Volumetric/CloudLocalSpace"
 
             struct v2f
             {
-                float4 vertex : SV_POSITION;
-                float4 uv : TEXCOORD0;
-                float3 viewDir : TEXCOORD1;
+                float4 posNDC       : SV_POSITION;
+                float4 uv           : TEXCOORD0;    // xy, 屏幕空间的UV； zw，蓝噪声的的uv（保持长宽比）
+                float3 rayDirLS     : TEXCOORD1;    // 云盒本地空间下的 ray 方向
+                float3 rayOriginLS  : TEXCOORD2;    // 云盒本地空间下的 ray 起点（相机位置）
+                float3 lightDirLS   : TEXCOORD3;    // 云盒本地空间下的 灯光 方向 （主光源）
             };
 
             // 计算射线和包围盒的碰撞信息
@@ -119,8 +119,11 @@ Shader "Volumetric/CloudLocalSpace"
             // invRayDir: 1 / 射线方向
             // return: x:射线走了多远才碰到包围盒，y:射线在包围盒内走了多远。
             // 参考资料: https://jcgt.org/published/0007/03/04/
-            float2 InterceptRayBox(float3 boundsMin, float3 boundsMax, float3 rayOrigin, float3 invRayDir)
+            float2 InterceptRayBox( float3 rayOrigin, float3 invRayDir)
             {
+                float3 boundsMin = -0.5 * _BoxSize;
+                float3 boundsMax = 0.5 * _BoxSize;
+
                 float3 t0 = (boundsMin - rayOrigin) * invRayDir;
                 float3 t1 = (boundsMax - rayOrigin) * invRayDir;
                 float3 tmin = min(t0, t1);
@@ -159,18 +162,18 @@ Shader "Volumetric/CloudLocalSpace"
                 const int kMipLevel = 0;
 
                 // 包围盒边界的FadeIn，FadeOut
-                float3 edgeDst = min(_EdgeFadeDistance, min(rayPos - _BoxMin, _BoxMax.x - rayPos)) / _EdgeFadeDistance;
+                float3 edgeDst = min(_EdgeFadeDistance, min(rayPos - (-0.5 * _BoxSize), 0.5 *_BoxSize - rayPos)) / _EdgeFadeDistance;
                 float edgeWeight = min(edgeDst.x, min(edgeDst.y, edgeDst.z));
                 
 
-                float3 uvw = (rayPos - _BoxMin) / (_BoxMax - _BoxMin);
+                float3 uvw = (rayPos + _BoxSize* 0.5) / _BoxSize;
                 half4 weather = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, uvw.xz, kMipLevel);
                 float minG = Remap(weather.r, 0, 1.0, 0.1, 0.5);
                 float maxG = Remap(weather.r, 0, 1.0, minG, 0.9);
                 float heightGradient = saturate(Remap(uvw.y, 0, minG, 0, 1)) * saturate(Remap(uvw.y, 1, maxG, 0, 1));
                 heightGradient *= edgeWeight;
                 
-                uvw = ((_BoxMax - _BoxMin) * 0.5 + rayPos) * 0.001;
+                uvw = (_BoxSize * 0.5 + rayPos) * 0.001;
                 float time = _Time.x;
 
                 float3 shapeUVW = uvw * _ShapeUvwParam.x + float3(time, time * 0.1, time * 0.2) * _ShapeUvwParam.y + _ShapeOffset.xyz * _ShapeUvwParam.z;
@@ -195,7 +198,7 @@ Shader "Volumetric/CloudLocalSpace"
             float LightMarch(float3 position, float3 lightDir)
             {
                 // 这里的不仅方向改成向着光源方向了
-                float2 intercept = InterceptRayBox(_BoxMin, _BoxMax, position, 1.0 / lightDir);
+                float2 intercept = InterceptRayBox(position, 1.0 / lightDir);
                 float marchStep = intercept.y / _MarchParam.y;
                 float totalDencity = 0;
                 for (int step = 0; step < _MarchParam.y; step++)
@@ -215,35 +218,44 @@ Shader "Volumetric/CloudLocalSpace"
             v2f vert(appdata v)
             {
                 v2f o;
-                o.vertex = TransformObjectToHClip(v.vertex);
+                o.posNDC = TransformObjectToHClip(v.vertex);
+                
                 o.uv.xy = v.uv;
                 // 蓝噪声的特性跟单位面积有关，采样时最好保持原图的长宽比。
                 o.uv.zw = v.uv * float2(1, _ScreenParams.y / _ScreenParams.x) * _BlueNoiseScale; 
+
+                Light mainLight = GetMainLight();
+                float3 lightDir = mainLight.direction;
+                o.lightDirLS = mul(_BoxW2L, float4(lightDir, 0)).xyz;
                 float3 viewVector = mul(unity_CameraInvProjection, float4(v.uv * 2 - 1, 0, -1)).xyz;
-                o.viewDir = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
+                viewVector = mul(unity_CameraToWorld, float4(viewVector, 0)).xyz;
+                o.rayDirLS = mul(_BoxW2L, float4(viewVector, 0)).xyz;
+                o.rayOriginLS = mul(_BoxW2L, float4(_WorldSpaceCameraPos.xyz, 1)).xyz;
                 return o;
             }
 
 
             half4 frag(v2f i) : SV_Target
             {
-                half depth = LinearEyeDepth(LoadSceneDepth(i.vertex.xy), _ZBufferParams);
-
-                Light mainLight = GetMainLight();
-                float3 lightDir = mainLight.direction;
-
-                float3 rayOrigin = _WorldSpaceCameraPos;
-                float3 rayDir = normalize(i.viewDir);
+                half depth = LinearEyeDepth(LoadSceneDepth(i.posNDC.xy), _ZBufferParams);
+                
+                float3 lightDir = normalize(i.lightDirLS);
+                float3 rayOrigin = i.rayOriginLS;
+                float3 rayDir = normalize(i.rayDirLS);
 
                 // 相位函数使太阳周围的云在逆光时更亮。
                 float cosAngle = dot(rayDir, lightDir);
                 float scatterBlend = lerp(HGScattering(cosAngle, _PhaseParam.x), HGScattering(cosAngle, -_PhaseParam.y), 0.5);
                 float phase = _PhaseParam.z + scatterBlend * _PhaseParam.w;
                 half noise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0).r;
+                
                 // 为了消除步进带来的断层现象，每条Ray的步进的距离是不一样的
                 float marchStep = (noise * 0.9 + 0.1) * _MarchParam.x;
                 
-                float2 intercept = InterceptRayBox(_BoxMin, _BoxMax, rayOrigin, 1.0 / rayDir);
+                float2 intercept = InterceptRayBox(rayOrigin, 1.0 / rayDir);
+
+                // return intercept.y * half4(1, 1, 1, 1);
+
                 float3 rayEntryPoint = rayOrigin + rayDir * intercept.x;
                 float maxMarchDst = min(intercept.y, depth - intercept.x);
                 
@@ -262,7 +274,10 @@ Shader "Volumetric/CloudLocalSpace"
                 }
                 
                 half3 bgColor = SAMPLE_TEXTURE2D(_MainTex, sampler_2D, i.uv.xy).rgb;
+
+                Light mainLight = GetMainLight();
                 half3 cloudColor = lightEnergy * mainLight.color;
+
                 half3 color = lerp(cloudColor, bgColor, transmittance);
                 return half4(color, 1);
             }
