@@ -25,12 +25,51 @@ public class VolumetricRenderer : MonoBehaviour
     {
         Instance = this;
     }
-    
+
+#if UNITY_EDITOR
+    public readonly Vector3[] kGizmosPoints = new Vector3[]{
+        new Vector3(-0.5f, -0.5f, -0.5f),
+        new Vector3(-0.5f, -0.5f, 0.5f),
+        new Vector3(-0.5f, 0.5f, -0.5f),
+        new Vector3(-0.5f, 0.5f, 0.5f),
+        new Vector3(0.5f, -0.5f, -0.5f),
+        new Vector3(0.5f, -0.5f, 0.5f),
+        new Vector3(0.5f, 0.5f, -0.5f),
+        new Vector3(0.5f, 0.5f, 0.5f),
+    };
+
+    public readonly Vector3[] kTransformedGizmosPoints = new Vector3[8];
+
+    private readonly int[] kGizemoLineIndex = new int[] 
+    {
+        0, 1,
+        0, 2,
+        0, 4,
+        1, 3,
+        1, 5,
+        2, 3,
+        2, 6,
+        3, 7,
+        4, 5,
+        4, 6,
+        5, 7,
+        6, 7,
+    };
+
     void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
-        Gizmos.DrawWireCube(transform.position, Size);
+        var points = kTransformedGizmosPoints;
+        for (int i = 0; i < 8; ++i)
+        {
+            points[i] = transform.TransformPoint(kGizmosPoints[i]);
+        }
+        for (int i = 0; i < kGizemoLineIndex.Length; i += 2)
+        {
+            Gizmos.DrawLine(points[kGizemoLineIndex[i]], points[kGizemoLineIndex[i + 1]]);
+        }
     }
+    #endif
 
     private static class ShaderPropertyID
     {

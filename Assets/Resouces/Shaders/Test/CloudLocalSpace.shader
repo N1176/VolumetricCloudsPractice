@@ -1,13 +1,10 @@
-Shader "Volumetric/Cloud"
+// 将灯光，射线方向，映射到模型的本地空间下计算。
+Shader "Volumetric/CloudLocalSpace"
 {
     Properties
     {
         [MainTexture][NoScaleOffset] _MainTex ("MainTex", 2D) = "white" { }
         [MainColor] _MainColor ("MainColor", Color) = (1, 1, 1, 1)
-
-        // [Header(BOX Corner)]
-        // _BoxMin ("Box Min", Vector) = (0, 0, 0, 1)
-        // _BoxMax ("Box Max", Vector) = (1, 1, 1, 1)
 
         [Header(Shape Noise)]
         [NoScaleOffset]_ShapeNoise ("Shape Noise", 3D) = "white" { }

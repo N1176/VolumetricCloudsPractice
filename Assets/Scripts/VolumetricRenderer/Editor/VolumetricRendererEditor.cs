@@ -20,6 +20,26 @@ public class VolumetricRendererEditor : Editor
         }
     }
 
+    public bool HasFrameBounds() 
+    {
+        return true; 
+        
+    }
+ 
+    public Bounds OnGetFrameBounds() {
+        var points = _volumeRenderer.kTransformedGizmosPoints;
+        Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+        Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+        for (int i = 0; i <  _volumeRenderer.kTransformedGizmosPoints.Length; ++i)
+        {
+            var point = _volumeRenderer.kTransformedGizmosPoints[i];
+            max = Vector3.Max(point, max);
+            min = Vector3.Min(point, min);
+        }
+        return new Bounds((min + max) / 2, max - min);
+    }
+
+
     private int lastMatInstanceID = 0;
 
     public override void OnInspectorGUI()
