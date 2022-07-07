@@ -98,7 +98,7 @@ Material:
     m_Floats:
     - _AlphaClip: 0
     - _Blend: 0
-    - _BlueNoiseScale: 0.1
+    - _BlueNoiseScale: 0.01
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
@@ -112,10 +112,13 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _InOutScatterRatio: 0.5
+    - _InScatter: 0.28
     - _MarchDistance: 0
     - _MarchStep: 0.1
     - _Metallic: 0
     - _OcclusionStrength: 1
+    - _OutScatter: 0.72
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
@@ -124,6 +127,8 @@ Material:
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _SunFresnelExponent: 0
+    - _SunFresnelIntencity: 0
     - _Surface: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
@@ -134,25 +139,25 @@ Material:
     - _BoxMax: {r: 2000, g: 125, b: 2000, a: 0}
     - _BoxMin: {r: -2000, g: -125, b: -2000, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _DensityParam: {r: -4.22, g: 1.32, b: 0.4, a: 0}
+    - _DensityParam: {r: -3.24, g: 1.32, b: 0.4, a: 0}
     - _DetailOffset: {r: 130.23, g: 0, b: 0, a: 0}
     - _DetailScale: {r: 1, g: 1, b: 1, a: 1}
-    - _DetailUvwParam: {r: 3.2, g: 1, b: 0.01, a: 1}
-    - _DetailWeight: {r: 2.57, g: 0.89, b: 1.37, a: 0}
+    - _DetailUvwParam: {r: 4.07, g: 1, b: 0.01, a: 1}
+    - _DetailWeight: {r: 4.02, g: 0.89, b: 1.37, a: 0}
     - _EdgeFadeDistance: {r: 50, g: 1, b: 50, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _MainColor: {r: 0, g: 0, b: 0, a: 1}
-    - _MarchParam: {r: 9.19, g: 8, b: 1, a: 1}
+    - _MarchParam: {r: 10, g: 8, b: 1, a: 1}
     - _NoiseScale: {r: 1, g: 1, b: 1, a: 1}
-    - _PhaseParam: {r: 0.72, g: 0.4, b: 0.12, a: 0.19}
+    - _PhaseParam: {r: 1.15, g: 0.63, b: 0.33, a: 1}
     - _ShapeOffset: {r: 0, g: 0, b: 0, a: 0}
     - _ShapeParam: {r: -3.64, g: 0.6, b: 1, a: 1}
     - _ShapeScale: {r: 2.51, g: 0.89, b: 1.37, a: 0.57}
     - _ShapeUvwParam: {r: 0.6, g: 0.5, b: 0.01, a: 1}
-    - _ShapeWeight: {r: 2.51, g: 0.89, b: 1.37, a: 0.57}
+    - _ShapeWeight: {r: 2.51, g: 0.25, b: 0.125, a: 0.57}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SpeedParam: {r: 1, g: 0.5, b: 1, a: 1}
-    - _TransmittiveParam: {r: 0.17, g: 0.38, b: 0.28, a: 1}
+    - _TransmittiveParam: {r: 0.14, g: 0.38, b: 0.28, a: 1}
   m_BuildTextureStacks: []
 --- !u!114 &741927647596575465
 MonoBehaviour:

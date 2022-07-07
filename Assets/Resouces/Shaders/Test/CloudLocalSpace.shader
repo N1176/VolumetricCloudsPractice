@@ -3,9 +3,6 @@ Shader "Volumetric/Test/CloudLocalSpace"
 {
     Properties
     {
-        [MainTexture][NoScaleOffset] _MainTex ("MainTex", 2D) = "white" { }
-        [MainColor] _MainColor ("MainColor", Color) = (1, 1, 1, 1)
-
         [Header(Shape Noise)]
         [NoScaleOffset]_ShapeNoise ("Shape Noise", 3D) = "white" { }
         _ShapeWeight ("Shape Weights", Vector) = (1, 1, 1, 1)
@@ -21,14 +18,14 @@ Shader "Volumetric/Test/CloudLocalSpace"
         _DetailUvwParam ("Detail UVW Parameters", Vector) = (1, 1, 1, 1)
 
         [NoScaleOffset] _BlueNoise ("Blue Noise", 2D) = "white" { }
-        _BlueNoiseScale ("Blue Noise Scale", Range(0.1, 5)) = 1
+        _BlueNoiseScale ("Blue Noise Scale", Range(0.01, 5)) = 1
         _WeatherMap ("Weather Map", 2D) = "white" { }
 
         [VectorField(Offset, DetailWeight, Scale)]
         _DensityParam ("Density Parameters", Vector) = (0, 0, 0, 0)
 
         [VectorField(ForwardScattering, BackScattering, BaseBrightness, PhaseFactor)]
-        _PhaseParam ("Phase Parameters", Vector) = (1, 1, 1, 1)
+        _PhaseParam ("Phase Parameters", Vector) = (1, 1, 1, 1)        
 
         [VectorField(CloudAbsorption, SunAbsorption, DarknessThreshold)]
         _TransmittiveParam ("Transmittive Parameters", Vector) = (1, 1, 1, 1)
@@ -59,12 +56,6 @@ Shader "Volumetric/Test/CloudLocalSpace"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/DeclareDepthTexture.hlsl"
 
-
-            TEXTURE2D(_MainTex);
-            // SAMPLER(sampler_MainTex);
-
-            half4 _MainColor;
-            
             TEXTURE3D(_ShapeNoise);
             float4 _ShapeWeight;
             float4 _ShapeUvwParam;
@@ -95,6 +86,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
 
             float4 _DensityParam;
             float4 _PhaseParam;
+
             float4 _MarchParam;
             float4 _TransmittiveParam;
             float4 _SpeedParam;
@@ -166,7 +158,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float edgeWeight = min(edgeDst.x, min(edgeDst.y, edgeDst.z));
                 
 
-                float3 uvw = (rayPos + _BoxSize* 0.5) / _BoxSize;
+                float3 uvw = (rayPos + _BoxSize * 0.5) / _BoxSize;
                 half4 weather = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, uvw.xz, kMipLevel);
                 float minG = Remap(weather.r, 0, 1.0, 0.1, 0.5);
                 float maxG = Remap(weather.r, 0, 1.0, minG, 0.9);
@@ -244,42 +236,37 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float3 rayDir = normalize(i.rayDirLS);
 
                 // 相位函数使太阳周围的云在逆光时更亮。
-                float cosAngle = dot(rayDir, lightDir);
-                float scatterBlend = lerp(HGScattering(cosAngle, _PhaseParam.x), HGScattering(cosAngle, -_PhaseParam.y), 0.5);
-                float phase = _PhaseParam.z + scatterBlend * _PhaseParam.w;
-                half noise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0).r;
+                float cosT = dot(rayDir, lightDir);
+                float scatter = lerp(HGScattering(cosT, _PhaseParam.x), HGScattering(cosT, -_PhaseParam.y), 0.5);
+                float phase = _PhaseParam.z + scatter * _PhaseParam.w;
+                float noise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0).r;
+                float2 intercept = InterceptRayBox(i.rayOriginLS, 1.0 / rayDir);
                 
                 // 为了消除步进带来的断层现象，每条Ray的步进的距离是不一样的
                 float marchStep = (noise * 0.9 + 0.1) * _MarchParam.x;
-                
-                float2 intercept = InterceptRayBox(rayOrigin, 1.0 / rayDir);
-
-                // return intercept.y * half4(1, 1, 1, 1);
-
-                float3 rayEntryPoint = rayOrigin + rayDir * intercept.x;
                 float maxMarchDst = min(intercept.y, depth - intercept.x);
-                
                 float lightEnergy = 0;
-                float transmittance = 1;
-                for (float distance = marchStep; distance < maxMarchDst && transmittance > 0.01; distance += marchStep)
+                float transmittance = step(0.001, intercept.y);
+                float alpha = 0;
+                for (float distance = marchStep; distance < maxMarchDst; distance += marchStep)
                 {
-                    float3 rayPos = rayEntryPoint + distance * rayDir;
+                    float3 rayPos = i.rayOriginLS + (distance + intercept.x) * rayDir;
                     float density = SampleDensity(rayPos);
                     if (density > 0)
                     {
+                        alpha += density;
                         float lightTransmittance = LightMarch(rayPos, lightDir);
                         lightEnergy += density * 11 * transmittance * lightTransmittance * phase;
                         transmittance *= exp(-density * 11 * _TransmittiveParam.x);
+                        if (transmittance < 0.01)
+                        {
+                            break;
+                        }
                     }
                 }
-                
-                half3 bgColor = SAMPLE_TEXTURE2D(_MainTex, sampler_2D, i.uv.xy).rgb;
-
                 Light mainLight = GetMainLight();
                 half3 cloudColor = lightEnergy * mainLight.color;
-
-                half3 color = lerp(cloudColor, bgColor, transmittance);
-                return half4(color, 1);
+                return half4(cloudColor, saturate(alpha));
             }
             ENDHLSL
         }

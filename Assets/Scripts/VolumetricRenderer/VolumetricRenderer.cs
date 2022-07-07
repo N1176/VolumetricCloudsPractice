@@ -56,7 +56,7 @@ public class VolumetricRenderer : MonoBehaviour
         6, 7,
     };
 
-    void OnDrawGizmos()
+    private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.green;
         var points = kTransformedGizmosPoints;
@@ -73,8 +73,6 @@ public class VolumetricRenderer : MonoBehaviour
 
     private static class ShaderPropertyID
     {
-        public static readonly int BoxMin = Shader.PropertyToID("_BoxMin");
-        public static readonly int BoxMax = Shader.PropertyToID("_BoxMax");
         public static readonly int BoxW2L = Shader.PropertyToID("_BoxW2L");
         public static readonly int BoxSize = Shader.PropertyToID("_BoxSize");
     }

@@ -45,7 +45,6 @@ class VolumetricRenderPass : ScriptableRenderPass
         return true;
     }
 
-
     // Here you can implement the rendering logic.
     // Use <c>ScriptableRenderContext</c> to issue drawing commands or execute command buffers
     // https://docs.unity3d.com/ScriptReference/Rendering.ScriptableRenderContext.html
