@@ -24,6 +24,7 @@ public class VolumetricRenderer : MonoBehaviour
     private void OnEnable()
     {
         Instance = this;
+        SetupMaterial(true);
     }
 
 #if UNITY_EDITOR
@@ -79,7 +80,7 @@ public class VolumetricRenderer : MonoBehaviour
 
     public Material material;
 
-    [Range(0, 10)]
+    [Range(1, 16)]
     public int downSample = 1;
 
     public Vector3 BoundingMax
@@ -110,18 +111,24 @@ public class VolumetricRenderer : MonoBehaviour
         }
     }
 
-    public void SetupMaterial()
+    public void SetupMaterial(bool force = false)
     {
         if (null != material)
         {
-            var size = Size * 0.5f;
-            var pos = transform.position;
-            // material.SetVector(ShaderPropertyID.BoxMax, pos + size);
-            // material.SetVector(ShaderPropertyID.BoxMin, pos - size);
-            var matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
-            matrix = matrix.inverse;
-            material.SetMatrix(ShaderPropertyID.BoxW2L, matrix);
-            material.SetVector(ShaderPropertyID.BoxSize, transform.lossyScale);
+#if !UNITY_EDITOR
+            if (transform.hasChanged || force)
+#endif
+            { 
+                transform.hasChanged = false;
+                var size = Size * 0.5f;
+                var pos = transform.position;
+                var matrix = Matrix4x4.TRS(transform.position, transform.rotation, Vector3.one);
+                matrix = matrix.inverse;            
+                // material.SetVector(ShaderPropertyID.BoxMax, pos + size);
+                // material.SetVector(ShaderPropertyID.BoxMin, pos - size);
+                material.SetMatrix(ShaderPropertyID.BoxW2L, matrix);
+                material.SetVector(ShaderPropertyID.BoxSize, transform.lossyScale);
+            }
         }
     }
 }

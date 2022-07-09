@@ -53,7 +53,7 @@ class VolumetricRenderPass : ScriptableRenderPass
     {
         var renderer = VolumetricRenderer.Instance;
         
-        if (null == renderer || null == renderer.material || !renderer.gameObject.activeInHierarchy || !renderer.enabled || !renderingData.cameraData.postProcessEnabled)
+        if (null == renderer || null == renderer.material || !renderer.gameObject.activeInHierarchy || !renderer.enabled)
         {
             return;
         }
@@ -61,15 +61,15 @@ class VolumetricRenderPass : ScriptableRenderPass
         var cmd = CommandBufferPool.Get(kRenderTag);
         ref var cameraData = ref renderingData.cameraData;
         var opaqueDesc = cameraData.cameraTargetDescriptor;
-        opaqueDesc.msaaSamples = 1;
+        // opaqueDesc.msaaSamples = 1;
         opaqueDesc.depthBufferBits = 0;
         cmd.GetTemporaryRT(tempRTID.id, opaqueDesc);
         // 先把屏幕上的内容考出来(不能同时读写一张RT)
         cmd.Blit(sourceRTID, tempRTID.Identifier());
 
         // 将盒子画到三角形上。
-        opaqueDesc.width >>= renderer.downSample;
-        opaqueDesc.height >>= renderer.downSample;
+        opaqueDesc.width /= renderer.downSample;
+        opaqueDesc.height /= renderer.downSample;
         opaqueDesc.colorFormat = RenderTextureFormat.ARGB32;
         cmd.GetTemporaryRT(targetRTID.id, opaqueDesc);
         renderer.SetupMaterial();
@@ -78,6 +78,7 @@ class VolumetricRenderPass : ScriptableRenderPass
         // 混合盒子和原图。
         cmd.SetGlobalTexture(ShaderPropID.VolumeTex, targetRTID.Identifier());
         cmd.Blit(tempRTID.Identifier(), sourceRTID, upSampleMat);
+        // cmd.Blit(targetRTID.Identifier(), sourceRTID);
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();
         CommandBufferPool.Release(cmd);
@@ -85,8 +86,7 @@ class VolumetricRenderPass : ScriptableRenderPass
 
     public override void FrameCleanup(CommandBuffer cmd)
     {
-        
-        // cmd.ReleaseTemporaryRT(tempRTID.id);
-        // cmd.ReleaseTemporaryRT(targetRTID.id);
+        cmd.ReleaseTemporaryRT(tempRTID.id);
+        cmd.ReleaseTemporaryRT(targetRTID.id);
     }
 }

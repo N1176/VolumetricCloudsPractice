@@ -6,41 +6,37 @@ Shader "Volumetric/Test/CloudLocalSpace"
         [Header(Shape Noise)]
         [NoScaleOffset]_ShapeNoise ("Shape Noise", 3D) = "white" { }
         _ShapeWeight ("Shape Weights", Vector) = (1, 1, 1, 1)
-        _SpapeScale ("Shape UV Scale", Vector) = (1, 1, 1)
         _ShapeOffset ("Shape UV Offset", Vector) = (1, 1, 1, 1)
+        _ShapeScale ("Shape UV Scale", float) = 1
         _ShapeSpeed ("Shape Speed", float) = 1
 
         [Header(Detail Noise)]
         [NoScaleOffset]_DetailNoise ("Detail Noise", 3D) = "white" { }
         _DetailWeight ("Detail Weights", Vector) = (1, 1, 1, 1)
         _DetailOffset ("Detail Offset", Vector) = (1, 1, 1, 1)
-        _DetailScale ("Detail UV Scale", Vector) = (1, 1, 1)
+        _DetailScale ("Detail UV Scale", float) = 1
         _DetailSpeed ("Detail Speed", float) = 1
-   
+        
         [NoScaleOffset] _BlueNoise ("Blue Noise", 2D) = "white" { }
         _BlueNosieUVScale ("Blue Noise UV Scale", float) = 1
         _BlueNoiseValueScale ("Blue Noise Value Scale", float) = 1
-        _WeatherMap ("Weather Map", 2D) = "white" { }
+        [NoScaleOffset]_WeatherMap ("Weather Map", 2D) = "white" { }
 
         [VectorField(ForwardScattering, BackScattering, BaseBrightness, PhaseFactor)]
         _PhaseParam ("Phase Parameters", Vector) = (1, 1, 1, 1)
 
+        _DensitySetp ("March Step", Range(0.1, 100)) = 10
+        _LightStepCount ("Light March Step Count", Range(4, 10)) = 4
         
-
-        _DensitySetp("March Step", Range(1, 100)) = 10
-        _LightStepCount("Light March Step Count", Range(4, 10)) = 4
+        _DensityOffset ("Density Offset", Range(-1, 1)) = 0
+        _DetailDensityWeight ("Detail Density Weight", float) = 1
+        _DensityScale ("Density Scale", float) = 1
         
-        _HeightWeight ("Height Weight", Range(0, 1)) = 1
-        _EdgeFadeDistance ("Edge Fade Distance", Vector) = (50, 10, 50, 0)
-
-        _DensityOffset("Density Offset", Range(-1, 1)) = 0
-        _DetailDensityWeight("Detail Density Weight", float) = 1
-        _DensityScale("Density Scale", float) = 1
-        
-        _LightAbsorptionTowardSun("Light Absorption Toward Sun", float) = 1
-        _LightAbsorptionThroughCloud("Light Absorption Through Cloud", float) = 1
-        _DarknessThreshold("Darkness Threshold", Range(0, 1)) = 0
+        _LightAbsorptionTowardSun ("Light Absorption Toward Sun", float) = 1
+        _LightAbsorptionThroughCloud ("Light Absorption Through Cloud", float) = 1
+        _DarknessThreshold ("Darkness Threshold", Range(0, 1)) = 0
     }
+
     SubShader
     {
         Tags { "RenderType" = "Opaque" }
@@ -65,45 +61,38 @@ Shader "Volumetric/Test/CloudLocalSpace"
             TEXTURE3D(_ShapeNoise);
             float4 _ShapeWeight;
             float _ShapeSpeed;
-            float3 _ShapeScale;
+            float _ShapeScale;
             float3 _ShapeOffset;
 
             TEXTURE3D(_DetailNoise);
             float3 _DetailWeight;
-            float _DetailSpeed;
-            float3 _DetailScale;
             float3 _DetailOffset;
-            
+            float _DetailSpeed;
+            float _DetailScale;
             
             TEXTURE2D(_BlueNoise);
             float _BlueNoiseValueScale;
             float _BlueNosieUVScale;
 
             TEXTURE2D(_WeatherMap);
-            float4 _WeatherMap_ST;
+            
+            #define sampler_3D m_linear_repeat_sampler
+            #define sampler_2D sampler_trilinear_repeat
 
-            TEXTURE2D(_DisturbeMap);
-            float4 _DisturbeMap_ST;
-            
-            
-            SAMPLER(sampler_trilinear_repeat);
+            SAMPLER(sampler_2D);
+            SAMPLER(sampler_3D);
             
             #define EPSILON 0.0001
-            #define sampler_2D sampler_trilinear_repeat
-            #define sampler_3D sampler_trilinear_repeat
-
 
             float3 _BoxSize;
             float4x4 _BoxW2L;
-
-            float3 _EdgeFadeDistance;
 
             float4 _DensityParam;
             float4 _PhaseParam;
 
             float4 _MarchParam;
 
-            float _HeightWeight;
+            // float _HeightWeight;
 
             float _DensityOffset;
             float _DetailDensityWeight;
@@ -170,6 +159,12 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 return (1 - g2) / (4 * PI * pow(abs(1 + g2 - 2 * g * cosT), 1.5));
             }
 
+            float Phase(float cosT)
+            {
+                float scatter = lerp(HGScattering(cosT, _PhaseParam.x), HGScattering(cosT, -_PhaseParam.y), 0.5);
+                return _PhaseParam.z + scatter * _PhaseParam.w;
+            }
+
             // 将值v从[oldMin, oldMax]映射到[newMin, newMax]
             float Remap(float v, float oldMin, float oldMax, float newMin, float newMax)
             {
@@ -184,31 +179,30 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float deltaDetail = _Time.y * _DetailSpeed;
 
                 // 包围盒边界平滑
-                float3 edgeDst = min(_EdgeFadeDistance, min(rayPos + 0.5 * _BoxSize, 0.5 * _BoxSize - rayPos)) / _EdgeFadeDistance;
-                float edgeWeight = min(edgeDst.x, min(edgeDst.y, edgeDst.z));
+                float3 softEdige = min(float3(10, 0, 10), _BoxSize * 0.05);
+                float3 edgeDst = min(softEdige, min(rayPos + 0.5 * _BoxSize, 0.5 * _BoxSize - rayPos)) / softEdige;
+                float edgeWeight = min(edgeDst.x, edgeDst.z);
 
                 // 相对于box的后左下的位置。
                 float3 pos = rayPos + 0.5 * _BoxSize;
-                float3 uvw = (rayPos + _BoxSize * 0.5) / _BoxSize;
+                float3 uvw = pos / max(_BoxSize.x, max(_BoxSize.y, _BoxSize.z));
+                float2 weatherUV = uvw.xz;
+                float4 weatherMap = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, weatherUV, kMipLevel);
 
-                // 2D 采样uv
-                float2 uv = pos.xz / min(_BoxSize.x, _BoxSize.z);
-
-                float4 weather = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, uv, kMipLevel);
-                float minG = Remap(weather.r, 0, 1.0, 0.1, 0.9);
-                float maxG = Remap(weather.r, 0, 1.0, minG, 0.9);
+                // 从天气图的R通道计算高度
+                float gMin = Remap(weatherMap.x, 0.0, 1.0, 0.1, 0.5);
+                float gMax = Remap(weatherMap.x, 0.0, 1.0, gMin, 0.9);
                 float heightPercent = pos.y / _BoxSize.y;
-                float heightGradient1 = saturate(Remap(heightPercent, 0.0, minG, 0.0, 1.0)) * saturate(Remap(heightPercent, 1.0, maxG, 0.0, 1.0));
-                float heightGradient2 = saturate(Remap(heightPercent, 0.0, weather.r, 1.0, 0.0)) * saturate(Remap(heightPercent, 0.0, minG, 0.0, 1.0));
-                float heightGradient = lerp(heightGradient1, heightGradient2, _HeightWeight) * edgeWeight;
-                
-                float3 shapeUVW = pos * _ShapeScale + float3(1.0, 0.2, 0.0) * deltaShape + _ShapeOffset;
-                float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW, kMipLevel);
+                float heightGradient = saturate(Remap(heightPercent, 0.0, gMin, 0.0, 1.0)) * saturate(Remap(heightPercent, 1.0, gMax, 0.0, 1.0));
+
+                float3 shapeUVW = uvw * _ShapeScale + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
+                float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, pos * shapeUVW, kMipLevel);
                 float shapeFBM = dot(shape, _ShapeWeight / dot(_ShapeWeight, 1)) * heightGradient;
                 float shapeDensity = shapeFBM + _DensityOffset;
+                // return shapeDensity;
                 if (shapeDensity > 0)
                 {
-                    float3 detailUVW = pos * _DetailScale + float3(1.0, 0.2, 0) * deltaDetail + _DetailOffset;
+                    float3 detailUVW = uvw * _ShapeScale * _DetailScale + _DetailOffset / 100.0 + float3(0.4, -1, 0.1) * _Time.x * _DetailSpeed;
                     half3 detail = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW, kMipLevel).rgb;
                     float detailFBM = dot(detail, _DetailWeight / dot(_DetailWeight, 1));
                     float temp = 1 - shapeFBM;
@@ -223,16 +217,15 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 // 这里的不仅方向改成向着光源方向了
                 float2 intercept = InterceptRayBox(position, 1.0 / lightDir);
                 float marchStep = intercept.y / _LightStepCount;
-                float totalDencity = 0;
+                float totalDensity = 0;
                 for (int step = 0; step < _LightStepCount; step++)
                 {
                     position += lightDir * marchStep;
                     float density = SampleDensity(position);
-                    totalDencity += max(0, density);
+                    totalDensity += max(0, density);
                 }
-
-                float transmittance = exp(-totalDencity * _LightAbsorptionTowardSun);
-                return _DarknessThreshold + (1 - _DarknessThreshold) * transmittance;
+                float transmittance = exp(-totalDensity * _LightAbsorptionTowardSun);
+                return lerp(transmittance, 1, _DarknessThreshold);
             }
 
             v2f vert(appdata v)
@@ -260,13 +253,11 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 half depth = LinearEyeDepth(LoadSceneDepth(i.posNDC.xy), _ZBufferParams);
                 
                 float3 lightDir = normalize(i.lightDirLS);
-                float3 rayOrigin = i.rayOriginLS;
                 float3 rayDir = normalize(i.rayDirLS);
 
                 // 相位函数使太阳周围的云在逆光时更亮。
                 float cosT = dot(rayDir, lightDir);
-                float scatter = lerp(HGScattering(cosT, _PhaseParam.x), HGScattering(cosT, -_PhaseParam.y), 0.5);
-                float phase = _PhaseParam.z + scatter * _PhaseParam.w;
+                float phase = Phase(cosT);
                 float noise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0).r;
                 float2 intercept = InterceptRayBox(i.rayOriginLS, 1.0 / rayDir);
                 float maxMarchDst = min(intercept.y, depth - intercept.x);
@@ -275,10 +266,11 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float stepSize = _DensitySetp;
                 float distance = noise * _BlueNoiseValueScale;
                 float alpha = 0;
-                while ( distance < maxMarchDst)
+                while (distance < maxMarchDst)
                 {
                     float3 rayPos = i.rayOriginLS + (distance + intercept.x) * rayDir;
                     float density = SampleDensity(rayPos);
+                    // return half4(density.xxx, 1);
                     if (density > 0)
                     {
                         density *= stepSize;
@@ -292,8 +284,8 @@ Shader "Volumetric/Test/CloudLocalSpace"
                     }
                     distance += stepSize;
                 }
-                Light mainLight = GetMainLight();
-                half3 cloudColor = lightEnergy * mainLight.color;
+                return half4(totalDencity.xxx, 1);
+                half3 cloudColor = lightEnergy * _MainLightColor.rgb;
                 return half4(cloudColor, totalDencity);
             }
             ENDHLSL

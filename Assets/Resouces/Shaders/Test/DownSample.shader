@@ -58,7 +58,7 @@ Shader "Volumetric/Test/DownSample"
                 float3 lightDirLS : TEXCOORD3;  // 云盒本地空间下的 灯光 方向 （主光源）
             };
 
-             // 计算射线和包围盒的碰撞信息
+            // 计算射线和包围盒的碰撞信息
             // rayOrigin:射线起点
             // invRayDir: 1 / 射线方向
             // return: x:射线走了多远才碰到包围盒，y:射线在包围盒内走了多远。
