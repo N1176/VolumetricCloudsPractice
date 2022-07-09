@@ -5,10 +5,6 @@ Shader "Volumetric/Cloud"
         [MainTexture][NoScaleOffset] _MainTex ("MainTex", 2D) = "white" { }
         [MainColor] _MainColor ("MainColor", Color) = (1, 1, 1, 1)
 
-        [Header(BOX Corner)]
-        _BoxMin ("Box Min", Vector) = (0, 0, 0, 1)
-        _BoxMax ("Box Max", Vector) = (1, 1, 1, 1)
-
         [Header(Shape Noise)]
         [NoScaleOffset]_ShapeNoise ("Shape Noise", 3D) = "white" { }
         _ShapeWeight ("Shape Weights", Vector) = (1, 1, 1, 1)
@@ -244,7 +240,7 @@ Shader "Volumetric/Cloud"
                 float phase = _PhaseParam.z + scatterBlend * _PhaseParam.w;
                 half noise = SAMPLE_TEXTURE2D_LOD(_BlueNoise, sampler_2D, i.uv.zw, 0).r;
                 // 为了消除步进带来的断层现象，每条Ray的步进的距离是不一样的
-                float marchStep = (noise * 0.9 + 0.1) * _MarchParam.x;
+                float marchStep = noise  * _MarchParam.x;
                 
                 float2 intercept = InterceptRayBox(_BoxMin, _BoxMax, rayOrigin, 1.0 / rayDir);
                 float3 rayEntryPoint = rayOrigin + rayDir * intercept.x;
@@ -252,7 +248,7 @@ Shader "Volumetric/Cloud"
                 
                 float lightEnergy = 0;
                 float transmittance = 1;
-                for (float distance = marchStep; distance < maxMarchDst && transmittance > 0.01; distance += marchStep)
+                for (float distance = marchStep; distance < maxMarchDst; distance += marchStep)
                 {
                     float3 rayPos = rayEntryPoint + distance * rayDir;
                     float density = SampleDensity(rayPos);
@@ -261,6 +257,10 @@ Shader "Volumetric/Cloud"
                         float lightTransmittance = LightMarch(rayPos, lightDir);
                         lightEnergy += density * 11 * transmittance * lightTransmittance * phase;
                         transmittance *= exp(-density * 11 * _TransmittiveParam.x);
+                        if (transmittance < 0.01)
+                        {
+                            break;
+                        }
                     }
                 }
                 

@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Cloud
-  m_Shader: {fileID: 4800000, guid: 800523fce3163454e826bc188e611f50, type: 3}
+  m_Name: LocalSpaceCloud
+  m_Shader: {fileID: 4800000, guid: 57985286431eb9a4fa15b7ad66c22ef2, type: 3}
   m_ShaderKeywords: 
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -76,7 +76,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WeatherMap:
-        m_Texture: {fileID: 2800000, guid: f02c6e9778fd58a44b14056b781b10e8, type: 3}
+        m_Texture: {fileID: 2800000, guid: fac8254b9b8857b4694359b1f71e1747, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WorlyNoise:
@@ -98,32 +98,53 @@ Material:
     m_Floats:
     - _AlphaClip: 0
     - _Blend: 0
-    - _BlueNoiseScale: 0.1
+    - _BlueNoiseScale: 2.05
+    - _BlueNoiseValueScale: 9.03
+    - _BlueNosieUVScale: 1
     - _BumpScale: 1
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _Cull: 2
     - _Cutoff: 0.5
+    - _DarknessThreshold: 1
+    - _DensityOffset: -0.464
+    - _DensityScale: 0.82
+    - _DensitySetp: 37.4
     - _DetailAlbedoMapScale: 1
+    - _DetailDensityWeight: 1.5
     - _DetailNormalMapScale: 1
+    - _DetailScale: 1.72
+    - _DetailSpeed: 0
     - _DstBlend: 0
     - _EdgeFadeDistance: 50
     - _EnvironmentReflections: 1
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
+    - _HeightWeight: 0
+    - _InOutScatterRatio: 0.5
+    - _InScatter: 0.28
+    - _LightAbsorptionThroughCloud: 0.71
+    - _LightAbsorptionTowardSun: 1.6
+    - _LightStepCount: 4
     - _MarchDistance: 0
     - _MarchStep: 0.1
     - _Metallic: 0
     - _OcclusionStrength: 1
+    - _OutScatter: 0.72
     - _Parallax: 0.005
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
+    - _ShapeScale: -0.1
+    - _ShapeSpeed: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
+    - _SpapeScale: 6.94
     - _SpecularHighlights: 1
     - _SrcBlend: 1
+    - _SunFresnelExponent: 0
+    - _SunFresnelIntencity: 0
     - _Surface: 0
     - _WorkflowMode: 1
     - _ZWrite: 1
@@ -134,25 +155,26 @@ Material:
     - _BoxMax: {r: 2000, g: 125, b: 2000, a: 0}
     - _BoxMin: {r: -2000, g: -125, b: -2000, a: 0}
     - _Color: {r: 1, g: 1, b: 1, a: 1}
-    - _DensityParam: {r: -4.22, g: 1.32, b: 0.4, a: 0}
-    - _DetailOffset: {r: 130.23, g: 0, b: 0, a: 0}
-    - _DetailScale: {r: 1, g: 1, b: 1, a: 1}
-    - _DetailUvwParam: {r: 3.2, g: 1, b: 0.01, a: 1}
-    - _DetailWeight: {r: 2.57, g: 0.89, b: 1.37, a: 0}
-    - _EdgeFadeDistance: {r: 50, g: 1, b: 50, a: 0}
+    - _DensityParam: {r: -3.64, g: 1.5, b: 4, a: 0}
+    - _DetailOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _DetailScale: {r: 0.022, g: 0.022, b: 0.022, a: 1}
+    - _DetailUvwParam: {r: 4.07, g: 1, b: 0.01, a: 1}
+    - _DetailWeight: {r: 3.98, g: 0.66, b: 1.37, a: 0}
+    - _EdgeFadeDistance: {r: 10, g: 1, b: 10, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _MainColor: {r: 0, g: 0, b: 0, a: 1}
-    - _MarchParam: {r: 9.19, g: 8, b: 1, a: 1}
+    - _MarchParam: {r: 10, g: 8, b: 0, a: 0}
     - _NoiseScale: {r: 1, g: 1, b: 1, a: 1}
-    - _PhaseParam: {r: 0.72, g: 0.4, b: 0.12, a: 0.19}
+    - _PhaseParam: {r: 0.72, g: 0.33, b: 1, a: 0.83}
     - _ShapeOffset: {r: 0, g: 0, b: 0, a: 0}
     - _ShapeParam: {r: -3.64, g: 0.6, b: 1, a: 1}
     - _ShapeScale: {r: 2.51, g: 0.89, b: 1.37, a: 0.57}
-    - _ShapeUvwParam: {r: 0.6, g: 0.5, b: 0.01, a: 1}
-    - _ShapeWeight: {r: 2.51, g: 0.89, b: 1.37, a: 0.57}
+    - _ShapeUvwParam: {r: 0.5, g: 0.51, b: 0, a: 1}
+    - _ShapeWeight: {r: 2.51, g: 0.89, b: 1.37, a: 0.51}
+    - _SpapeScale: {r: 10, g: 10, b: 10, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SpeedParam: {r: 1, g: 0.5, b: 1, a: 1}
-    - _TransmittiveParam: {r: 0.17, g: 0.38, b: 0.28, a: 1}
+    - _TransmittiveParam: {r: 1.44, g: 1.6, b: 0.28, a: 0}
   m_BuildTextureStacks: []
 --- !u!114 &741927647596575465
 MonoBehaviour:
