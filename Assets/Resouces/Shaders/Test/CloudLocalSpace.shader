@@ -19,13 +19,13 @@ Shader "Volumetric/Test/CloudLocalSpace"
         
         [NoScaleOffset] _BlueNoise ("Blue Noise", 2D) = "white" { }
         _BlueNosieUVScale ("Blue Noise UV Scale", float) = 1
-        _BlueNoiseValueScale ("Blue Noise Value Scale", float) = 1
         [NoScaleOffset]_WeatherMap ("Weather Map", 2D) = "white" { }
 
         [VectorField(ForwardScattering, BackScattering, BaseBrightness, PhaseFactor)]
         _PhaseParam ("Phase Parameters", Vector) = (1, 1, 1, 1)
 
-        _DensitySetp ("March Step", Range(0.1, 100)) = 10
+        _VoidStep ("March Step", Range(1, 100)) = 10
+        _CloudStep("Cloud March Step", Range(1, 20)) = 1
         _LightStepCount ("Light March Step Count", Range(4, 10)) = 4
         
         _DensityOffset ("Density Offset", Range(-1, 1)) = 0
@@ -71,7 +71,6 @@ Shader "Volumetric/Test/CloudLocalSpace"
             float _DetailScale;
             
             TEXTURE2D(_BlueNoise);
-            float _BlueNoiseValueScale;
             float _BlueNosieUVScale;
 
             TEXTURE2D(_WeatherMap);
@@ -98,7 +97,8 @@ Shader "Volumetric/Test/CloudLocalSpace"
             float _DetailDensityWeight;
             float _DensityScale;
 
-            float _DensitySetp;
+            float _VoidStep;
+            float _CloudStep;
             int _LightStepCount;
 
             float _LightAbsorptionTowardSun;
@@ -189,20 +189,20 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float2 weatherUV = uvw.xz;
                 float4 weatherMap = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, weatherUV, kMipLevel);
 
-                // 从天气图的R通道计算高度
+                // 从天气图的R通道计算当前位置的浓度系数
                 float gMin = Remap(weatherMap.x, 0.0, 1.0, 0.1, 0.5);
                 float gMax = Remap(weatherMap.x, 0.0, 1.0, gMin, 0.9);
                 float heightPercent = pos.y / _BoxSize.y;
                 float heightGradient = saturate(Remap(heightPercent, 0.0, gMin, 0.0, 1.0)) * saturate(Remap(heightPercent, 1.0, gMax, 0.0, 1.0));
 
-                float3 shapeUVW = uvw * _ShapeScale + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
-                float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, pos * shapeUVW, kMipLevel);
+                uvw = uvw * _ShapeScale;
+                float3 shapeUVW = uvw + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
+                float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW, kMipLevel);
                 float shapeFBM = dot(shape, _ShapeWeight / dot(_ShapeWeight, 1)) * heightGradient;
                 float shapeDensity = shapeFBM + _DensityOffset;
-                // return shapeDensity;
                 if (shapeDensity > 0)
                 {
-                    float3 detailUVW = uvw * _ShapeScale * _DetailScale + _DetailOffset / 100.0 + float3(0.4, -1, 0.1) * _Time.x * _DetailSpeed;
+                    float3 detailUVW = uvw * _DetailScale + _DetailOffset / 100.0 + float3(0.4, -1, 0.1) * _Time.x * _DetailSpeed;
                     half3 detail = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW, kMipLevel).rgb;
                     float detailFBM = dot(detail, _DetailWeight / dot(_DetailWeight, 1));
                     float temp = 1 - shapeFBM;
@@ -262,17 +262,16 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float2 intercept = InterceptRayBox(i.rayOriginLS, 1.0 / rayDir);
                 float maxMarchDst = min(intercept.y, depth - intercept.x);
                 float lightEnergy = 0;
-                float totalDencity = step(EPSILON, intercept.y);
-                float stepSize = _DensitySetp;
-                float distance = noise * _BlueNoiseValueScale;
-                float alpha = 0;
+                float totalDencity = 1;
+                float stepSize = _CloudStep;
+                float distance = noise * 2 * _CloudStep;
                 while (distance < maxMarchDst)
                 {
                     float3 rayPos = i.rayOriginLS + (distance + intercept.x) * rayDir;
                     float density = SampleDensity(rayPos);
-                    // return half4(density.xxx, 1);
                     if (density > 0)
                     {
+                        stepSize = _CloudStep;
                         density *= stepSize;
                         float lightTransmittance = LightMarch(rayPos, lightDir);
                         lightEnergy += density * totalDencity * lightTransmittance * phase;
@@ -282,11 +281,20 @@ Shader "Volumetric/Test/CloudLocalSpace"
                             break;
                         }
                     }
+                    else
+                    {
+                        stepSize = max(stepSize, _VoidStep) + _CloudStep;
+                    }
                     distance += stepSize;
                 }
-                return half4(totalDencity.xxx, 1);
-                half3 cloudColor = lightEnergy * _MainLightColor.rgb;
-                return half4(cloudColor, totalDencity);
+                
+                // 测试云浓度
+                // return half4(lerp(0, totalDencity, step(EPSILON, intercept.y)).xxx, 1);
+                // float focusedEyeCos = pow(saturate(cosT), _PhaseParam.x);
+                // float alpha = (1 - totalDencity) * step(EPSILON, intercept.y);
+                // half3 cloudColor = lightEnergy * _MainLightColor.rgb;
+                // return half4(lightEnergy.xxx, 1);  
+                return half4(_MainLightColor.rgb * lightEnergy, lightEnergy * totalDencity);
             }
             ENDHLSL
         }

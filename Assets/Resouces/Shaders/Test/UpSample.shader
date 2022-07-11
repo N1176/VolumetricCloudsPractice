@@ -64,8 +64,8 @@ Shader "Volumetric/Test/UpSample"
             {
                 half4 mainColor = SAMPLE_TEXTURE2D_LOD(_MainTex, sampler2d, i.uv, 0);
                 half4 volumeColor = SAMPLE_TEXTURE2D_LOD(_VolumeTex, sampler2d, i.uv, 0);
-                return half4(volumeColor.xxx, 1.0);
-                return half4(lerp(mainColor.rgb, volumeColor.rgb, volumeColor.a), 1.0);
+                return half4(volumeColor.rgb + (1 - volumeColor.a) * mainColor.rgb, 1.0);
+                // return half4(lerp(mainColor.rgb, volumeColor.rgb, volumeColor.a), 1.0);
             }
             ENDHLSL
         }
