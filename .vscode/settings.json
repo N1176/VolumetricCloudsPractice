@@ -1,4 +1,4 @@
-﻿{
+{
     "files.exclude":
     {
         "**/.DS_Store":true,
@@ -45,8 +45,13 @@
         "**/*.unity":true,
         "build/":true,
         "Build/":true,
-        "Library/":true,
-        "library/":true,
+        "Library/APIUpdater":true,
+        "Library/Artifacts":true,
+        "Library/ScriptAssemblies":true,
+        "Library/ShaderCache":true,
+        "Library/StateCache":true,
+        "Library/TempArtifacts":true,
+        "Library/UIElements":true,
         "obj/":true,
         "Obj/":true,
         "ProjectSettings/":true,
