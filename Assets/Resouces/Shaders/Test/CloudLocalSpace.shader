@@ -34,7 +34,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
         
         _LightAbsorptionTowardSun ("Light Absorption Toward Sun", float) = 1
         _LightAbsorptionThroughCloud ("Light Absorption Through Cloud", float) = 1
-        _DarknessThreshold ("Darkness Threshold", Range(0, 1)) = 0
+        _DarknessThreshold ("Darkness Threshold", range(0,2)) = 0
     }
 
     SubShader
@@ -179,7 +179,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float deltaDetail = _Time.y * _DetailSpeed;
 
                 // 包围盒边界平滑
-                float3 softEdige = min(float3(10, 0, 10), _BoxSize * 0.05);
+                float3 softEdige = min(float3(50, 0, 50), _BoxSize * 0.05);
                 float3 edgeDst = min(softEdige, min(rayPos + 0.5 * _BoxSize, 0.5 * _BoxSize - rayPos)) / softEdige;
                 float edgeWeight = min(edgeDst.x, edgeDst.z);
 
@@ -194,6 +194,10 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float gMax = Remap(weatherMap.x, 0.0, 1.0, gMin, 0.9);
                 float heightPercent = pos.y / _BoxSize.y;
                 float heightGradient = saturate(Remap(heightPercent, 0.0, gMin, 0.0, 1.0)) * saturate(Remap(heightPercent, 1.0, gMax, 0.0, 1.0));
+                heightGradient *= edgeWeight;
+
+                
+
 
                 uvw = uvw * _ShapeScale;
                 float3 shapeUVW = uvw + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
@@ -225,6 +229,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
                     totalDensity += max(0, density);
                 }
                 float transmittance = exp(-totalDensity * _LightAbsorptionTowardSun);
+                // return transmittance * _DarknessThreshold;
                 return lerp(transmittance, 1, _DarknessThreshold);
             }
 
@@ -262,39 +267,41 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float2 intercept = InterceptRayBox(i.rayOriginLS, 1.0 / rayDir);
                 float maxMarchDst = min(intercept.y, depth - intercept.x);
                 float lightEnergy = 0;
-                float totalDencity = 1;
+                float totalDencity = 1; //step(0.0001, intercept.y);
                 float stepSize = _CloudStep;
                 float distance = noise * 2 * _CloudStep;
+                
                 while (distance < maxMarchDst)
                 {
                     float3 rayPos = i.rayOriginLS + (distance + intercept.x) * rayDir;
                     float density = SampleDensity(rayPos);
                     if (density > 0)
                     {
-                        stepSize = _CloudStep;
-                        density *= stepSize;
-                        float lightTransmittance = LightMarch(rayPos, lightDir);
-                        lightEnergy += density * totalDencity * lightTransmittance * phase;
-                        totalDencity *= exp(-density * _LightAbsorptionThroughCloud);
-                        if (totalDencity < 0.01)
+                        if (stepSize > _CloudStep)
                         {
-                            break;
+                            distance -= stepSize;
                         }
+                        else
+                        {
+                            density *= stepSize;
+                            float lightTransmittance = LightMarch(rayPos, lightDir);
+                            lightEnergy += density * totalDencity * lightTransmittance * phase;
+                            totalDencity *= exp(-density * _LightAbsorptionThroughCloud);
+                            if (totalDencity < 0.01)
+                            {
+                                break;
+                            }
+                        }
+                        stepSize = _CloudStep;
                     }
                     else
                     {
-                        stepSize = max(stepSize, _VoidStep) + _CloudStep;
+                        stepSize = min(stepSize + _CloudStep * 0.5, _VoidStep);
                     }
                     distance += stepSize;
                 }
-                
-                // 测试云浓度
-                // return half4(lerp(0, totalDencity, step(EPSILON, intercept.y)).xxx, 1);
-                // float focusedEyeCos = pow(saturate(cosT), _PhaseParam.x);
-                // float alpha = (1 - totalDencity) * step(EPSILON, intercept.y);
-                // half3 cloudColor = lightEnergy * _MainLightColor.rgb;
-                // return half4(lightEnergy.xxx, 1);  
-                return half4(_MainLightColor.rgb * lightEnergy, lightEnergy * totalDencity);
+                float alpha = 1 - totalDencity;
+                return half4(_MainLightColor.rgb * lightEnergy, alpha);
             }
             ENDHLSL
         }
