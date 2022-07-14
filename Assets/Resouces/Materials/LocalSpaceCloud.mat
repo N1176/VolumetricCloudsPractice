@@ -76,7 +76,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WeatherMap:
-        m_Texture: {fileID: 2800000, guid: f02c6e9778fd58a44b14056b781b10e8, type: 3}
+        m_Texture: {fileID: 2800000, guid: fb2d16542d930b543aed4435cdbeacf6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WorlyNoise:
@@ -107,14 +107,14 @@ Material:
     - _CloudStep: 4
     - _Cull: 2
     - _Cutoff: 0.5
-    - _DarknessThreshold: 0.55
-    - _DensityOffset: -0.44
-    - _DensityScale: 0.68
+    - _DarknessThreshold: 0.54
+    - _DensityOffset: -0.34
+    - _DensityScale: 0.026
     - _DensitySetp: 20
     - _DetailAlbedoMapScale: 1
-    - _DetailDensityWeight: 0.89
+    - _DetailDensityWeight: 0.27
     - _DetailNormalMapScale: 1
-    - _DetailScale: 0
+    - _DetailScale: 1
     - _DetailSpeed: 0
     - _DstBlend: 0
     - _EdgeFadeDistance: 50
@@ -125,8 +125,8 @@ Material:
     - _HeightWeight: 0
     - _InOutScatterRatio: 0.5
     - _InScatter: 0.28
-    - _LightAbsorptionThroughCloud: 0.66
-    - _LightAbsorptionTowardSun: 10.05
+    - _LightAbsorptionThroughCloud: 1
+    - _LightAbsorptionTowardSun: 1
     - _LightStepCount: 4
     - _MarchDistance: 0
     - _MarchStep: 0.1
@@ -137,8 +137,8 @@ Material:
     - _QueueOffset: 0
     - _ReceiveShadows: 1
     - _SampleGI: 0
-    - _ShapeScale: 2.62
-    - _ShapeSpeed: 0.42
+    - _ShapeScale: 4.07
+    - _ShapeSpeed: 0.47
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpapeScale: 6.94
@@ -162,18 +162,18 @@ Material:
     - _DetailOffset: {r: 0, g: 0, b: 0, a: 0}
     - _DetailScale: {r: 0.022, g: 0.022, b: 0.022, a: 1}
     - _DetailUvwParam: {r: 4.07, g: 1, b: 0.01, a: 1}
-    - _DetailWeight: {r: 15.48, g: 1, b: 1, a: 0}
+    - _DetailWeight: {r: 18.8, g: -7.1, b: 1.84, a: 0}
     - _EdgeFadeDistance: {r: 10, g: 1, b: 10, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _MainColor: {r: 0, g: 0, b: 0, a: 1}
     - _MarchParam: {r: 10, g: 8, b: 0, a: 0}
     - _NoiseScale: {r: 1, g: 1, b: 1, a: 1}
-    - _PhaseParam: {r: 0.65, g: 0.5, b: 0.09, a: 3.23}
+    - _PhaseParam: {r: 1.17, g: 1.08, b: 0.09, a: 3.23}
     - _ShapeOffset: {r: 0, g: 0, b: 0, a: 0}
     - _ShapeParam: {r: -3.64, g: 0.6, b: 1, a: 1}
     - _ShapeScale: {r: 2.51, g: 0.89, b: 1.37, a: 0.57}
     - _ShapeUvwParam: {r: 0.5, g: 0.51, b: 0, a: 1}
-    - _ShapeWeight: {r: 8.16, g: 3.46, b: 1.37, a: 0.56}
+    - _ShapeWeight: {r: 77.29, g: 212.92, b: 42.69, a: 13.33}
     - _SpapeScale: {r: 10, g: 10, b: 10, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _SpeedParam: {r: 1, g: 0.5, b: 1, a: 1}

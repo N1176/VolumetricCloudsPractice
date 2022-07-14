@@ -20,6 +20,7 @@ Shader "Volumetric/Test/CloudLocalSpace"
         [NoScaleOffset] _BlueNoise ("Blue Noise", 2D) = "white" { }
         _BlueNosieUVScale ("Blue Noise UV Scale", float) = 1
         [NoScaleOffset]_WeatherMap ("Weather Map", 2D) = "white" { }
+        _FlowMapSpeed("Flow Map Speed", Range(0, 2)) = 1
 
         [VectorField(ForwardScattering, BackScattering, BaseBrightness, PhaseFactor)]
         _PhaseParam ("Phase Parameters", Vector) = (1, 1, 1, 1)
@@ -28,9 +29,9 @@ Shader "Volumetric/Test/CloudLocalSpace"
         _CloudStep("Cloud March Step", Range(1, 20)) = 1
         _LightStepCount ("Light March Step Count", Range(4, 10)) = 4
         
+        _DensityScale ("Density Scale", Range(0, 1)) = 1
         _DensityOffset ("Density Offset", Range(-1, 1)) = 0
         _DetailDensityWeight ("Detail Density Weight", float) = 1
-        _DensityScale ("Density Scale", float) = 1
         
         _LightAbsorptionTowardSun ("Light Absorption Toward Sun", float) = 1
         _LightAbsorptionThroughCloud ("Light Absorption Through Cloud", float) = 1
@@ -74,6 +75,8 @@ Shader "Volumetric/Test/CloudLocalSpace"
             float _BlueNosieUVScale;
 
             TEXTURE2D(_WeatherMap);
+            float _FlowMapSpeed;
+            float _FlowMapScale;
             
             #define sampler_3D m_linear_repeat_sampler
             #define sampler_2D sampler_trilinear_repeat
@@ -189,25 +192,39 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 float2 weatherUV = uvw.xz;
                 float4 weatherMap = SAMPLE_TEXTURE2D_LOD(_WeatherMap, sampler_2D, weatherUV, kMipLevel);
 
+                float heightPercent = pos.y / _BoxSize.y;
+                
                 // 从天气图的R通道计算当前位置的浓度系数
+                /*
                 float gMin = Remap(weatherMap.x, 0.0, 1.0, 0.1, 0.5);
                 float gMax = Remap(weatherMap.x, 0.0, 1.0, gMin, 0.9);
-                float heightPercent = pos.y / _BoxSize.y;
-                float heightGradient = saturate(Remap(heightPercent, 0.0, gMin, 0.0, 1.0)) * saturate(Remap(heightPercent, 1.0, gMax, 0.0, 1.0));
-                heightGradient *= edgeWeight;
+                float heightGradient = 
+                    saturate(Remap(heightPercent, 0.0, gMin, 0.0, 1.0)) * 
+                    saturate(Remap(heightPercent, 1.0, gMax, 0.0, 1.0)) *
+                    edgeWeight;
+                */
 
-                
-
-
+                /* 
+                天气图：为了方便美术刷云，讲浓度直接配置进天气图
+                    R通道：密度系数
+                    G通道：高度系数
+                    B & A 通道 ： FlowMap
+                */
+                float heightGradient = weatherMap.r * step(heightPercent, weatherMap.g) * edgeWeight;
                 uvw = uvw * _ShapeScale;
+
                 float3 shapeUVW = uvw + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
                 float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW, kMipLevel);
                 float shapeFBM = dot(shape, _ShapeWeight / dot(_ShapeWeight, 1)) * heightGradient;
                 float shapeDensity = shapeFBM + _DensityOffset;
                 if (shapeDensity > 0)
                 {
+                    float flowPhase0 = frac(_Time.y * _FlowMapSpeed);
+                    float flowPhase1 = frac(_Time.y * _FlowMapSpeed + 0.5);
                     float3 detailUVW = uvw * _DetailScale + _DetailOffset / 100.0 + float3(0.4, -1, 0.1) * _Time.x * _DetailSpeed;
-                    half3 detail = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW, kMipLevel).rgb;
+                    half3 detail0 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase0, kMipLevel).rgb;
+                    half3 detail1 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase1, kMipLevel).rgb;
+                    half3 detail = lerp(detail0, detail1, abs(0.5 - flowPhase0) / 0.5);
                     float detailFBM = dot(detail, _DetailWeight / dot(_DetailWeight, 1));
                     float temp = 1 - shapeFBM;
                     temp = temp * temp * temp;
