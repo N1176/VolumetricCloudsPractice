@@ -19,65 +19,7 @@ public class VolumetricRendererEditor : Editor
         }
     }
 
-    private bool isMouseDown = false;
-    private void OnSceneGUI()
-    {
-        if (!Selection.Contains(_volumeRenderer.gameObject))
-        {
-            return;
-        }
-
-        var transform = _volumeRenderer.transform;
-        Handles.color = Color.red;
-
-
-        var camera = SceneView.lastActiveSceneView.camera;
-        Event evt = Event.current;
-        Vector3 mousePos = evt.mousePosition;
-        mousePos.y = camera.pixelHeight - mousePos.y;
-        mousePos.z = camera.nearClipPlane;
-        var ray = camera.ScreenPointToRay(mousePos);
-
-        if (!Physics.Raycast(ray, out var hitInfo))
-        {
-            return;
-        }
-
-        // if (Mathf.Abs(Mathf.Abs(hitInfo.point.y) - 0.5f) > float.Epsilon)
-        // {
-        //     return;
-        // 
-        HandleUtility.AddDefaultControl(-1);
-        Handles.color = new Color(0, 1, 0, 1f);
-        Handles.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal * _volumeRenderer._brushRadius);
-        Handles.DrawWireDisc(hitInfo.point, hitInfo.normal, _volumeRenderer._brushRadius);
-        Handles.color = new Color(0, 1, 1, 0.2f);
-        Handles.DrawSolidDisc(hitInfo.point, hitInfo.normal, _volumeRenderer._brushRadius);
-
-        if (evt.button == 0 && evt.alt)
-        {
-            int controlID = GUIUtility.GetControlID(FocusType.Passive);
-            switch (evt.type)
-            {
-                case EventType.MouseDown:
-                    GUIUtility.hotControl = controlID;
-                    evt.Use();
-                    isMouseDown = true;
-                    break;
-                case EventType.MouseUp:
-                    GUIUtility.hotControl = 0;
-                    evt.Use();
-                    isMouseDown = false;
-                    break;
-                case EventType.MouseDrag:
-                    GUIUtility.hotControl = controlID;
-                    evt.Use();
-                    break;
-                default:
-                    break;
-            }
-        }
-    }
+    // F键，在Scene居中
 
     public bool HasFrameBounds()
     {
@@ -98,13 +40,9 @@ public class VolumetricRendererEditor : Editor
         return new Bounds((min + max) / 2, max - min);
     }
 
-
     private int lastMatInstanceID = 0;
-
     public override void OnInspectorGUI()
     {
-        _volumeRenderer._brushRadius = EditorGUILayout.FloatField("Brush Radius", _volumeRenderer._brushRadius);
-
         EditorGUI.BeginChangeCheck();
         EditorGUILayout.PropertyField(serializedObject.FindProperty("material"));
         EditorGUILayout.PropertyField(serializedObject.FindProperty("downSample"));

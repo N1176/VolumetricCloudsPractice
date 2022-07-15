@@ -8,6 +8,7 @@ using UnityEditor;
 
 
 [ExecuteInEditMode]
+[RequireComponent(typeof(BoxCollider))]
 public class VolumetricRenderer : MonoBehaviour
 {
     public static VolumetricRenderer Instance { get; private set; }
@@ -35,27 +36,9 @@ public class VolumetricRenderer : MonoBehaviour
     private void OnDestroy()
     {
         Instance = null;
-#if UNITY_EDITOR
-        SceneView.duringSceneGui -= this.OnScene;
-#endif
     }
 
 #if UNITY_EDITOR
-    private void OnFocus()
-    {
-        SceneView.duringSceneGui -= this.OnScene;
-        SceneView.duringSceneGui += this.OnScene;
-    }
-
-    private void OnScene(SceneView scene)
-    {
-        if (!Selection.Contains(this.gameObject))
-        {
-            return;
-        }
-
-
-    }
 
     public readonly Vector3[] kGizmosPoints = new Vector3[]{
         new Vector3(-0.5f, -0.5f, -0.5f),
@@ -99,11 +82,8 @@ public class VolumetricRenderer : MonoBehaviour
             Gizmos.DrawLine(points[kGizemoLineIndex[i]], points[kGizemoLineIndex[i + 1]]);
         }
     }
-
-    // 以下个值是编辑器才会用到的，
-    [HideInInspector]
-    public float _brushRadius;
 #endif
+
 
     private static class ShaderPropertyID
     {
