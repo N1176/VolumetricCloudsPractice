@@ -205,26 +205,35 @@ Shader "Volumetric/Test/CloudLocalSpace"
                 */
 
                 /* 
-                天气图：为了方便美术刷云，讲浓度直接配置进天气图
+                天气图：为了方便美术刷云，将浓度直接配置进天气图
                     R通道：密度系数
                     G通道：高度系数
                     B & A 通道 ： FlowMap
                 */
+                // 将ba从[0, 1]转换到[-1, 1]
+                weatherMap.ba = weatherMap.ba * 2 - 1;
                 float heightGradient = weatherMap.r * step(heightPercent, weatherMap.g) * edgeWeight;
                 uvw = uvw * _ShapeScale;
 
+                float shapePhase0 = frac(_Time.y * _FlowMapSpeed);
+                float shapePhase1 = frac(_Time.y * _FlowMapSpeed + 0.5);
                 float3 shapeUVW = uvw + _ShapeOffset / 100.0 + float3(1.0, 0.1, 0.2) * _Time.x * _ShapeSpeed;
-                float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW, kMipLevel);
+                half4 shape0 = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW + float3(weatherMap.b, 0, weatherMap.a) * shapePhase0, kMipLevel);
+                half4 shape1 = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW + float3(weatherMap.b, 0, weatherMap.a) * shapePhase1, kMipLevel);
+                half3 shape = lerp(shape0, shape1, abs(0.5 - shapePhase0) / 0.5);
+
+                // float4 shape = SAMPLE_TEXTURE3D_LOD(_ShapeNoise, sampler_3D, shapeUVW, kMipLevel);
                 float shapeFBM = dot(shape, _ShapeWeight / dot(_ShapeWeight, 1)) * heightGradient;
                 float shapeDensity = shapeFBM + _DensityOffset;
                 if (shapeDensity > 0)
                 {
-                    float flowPhase0 = frac(_Time.y * _FlowMapSpeed);
-                    float flowPhase1 = frac(_Time.y * _FlowMapSpeed + 0.5);
                     float3 detailUVW = uvw * _DetailScale + _DetailOffset / 100.0 + float3(0.4, -1, 0.1) * _Time.x * _DetailSpeed;
-                    half3 detail0 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase0, kMipLevel).rgb;
-                    half3 detail1 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase1, kMipLevel).rgb;
-                    half3 detail = lerp(detail0, detail1, abs(0.5 - flowPhase0) / 0.5);
+                    // float flowPhase0 = frac(_Time.y * _FlowMapSpeed);
+                    // float flowPhase1 = frac(_Time.y * _FlowMapSpeed + 0.5);
+                    // half3 detail0 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase0, kMipLevel).rgb;
+                    // half3 detail1 = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW + float3(weatherMap.zw, 0) * flowPhase1, kMipLevel).rgb;
+                    // half3 detail = lerp(detail0, detail1, abs(0.5 - flowPhase0) / 0.5);
+                    half3 detail = SAMPLE_TEXTURE3D_LOD(_DetailNoise, sampler_3D, detailUVW, kMipLevel).rgb;
                     float detailFBM = dot(detail, _DetailWeight / dot(_DetailWeight, 1));
                     float temp = 1 - shapeFBM;
                     temp = temp * temp * temp;
